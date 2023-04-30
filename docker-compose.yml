@@ -2,14 +2,15 @@ services:
 
   nginx:
     image: nginx
-    container_name: proxy
+    container_name: nginx
+    shm_size: '300m'
     depends_on:
       - traefik
     ports:
      - 80:80
-    restart: unless-stopped
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro
+    restart: unless-stopped
 
   traefik:
     image: traefik
@@ -17,13 +18,9 @@ services:
     ports:
       - 8080:8080
     command:
-      # - --logLevel=DEBUG
       - --api.insecure=true
-      # Enabling docker provider
       - --providers.docker=true
-      # Do not expose containers unless explicitly told so
       - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
