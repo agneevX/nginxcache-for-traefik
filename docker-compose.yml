@@ -1,63 +1,29 @@
-version: '3.4'
-
 services:
 
-  weatherclient:
-    build: ./weatherclient
-    ports:
-     - "8085:8085"
-    tty:
-      true
-    restart:
-      unless-stopped
-
   nginx:
-    build: ./nginx
+    image: nginx
+    container_name: proxy
+    depends_on:
+      - traefik
     ports:
-     - "8088:80"
-    # trying to imitate a machine, where Traefik + weatherbackend + Nginx are running all on one machine with DNS active
-    # therefore trying to configure Docker DNS alias for weatherbackend to Traefik container, which should route it to
-    # weatherbackend
-    networks:
-      default:
-        aliases:
-          - weatherbackend.server.test
-    restart:
-      always
+     - 80:80
+    restart: unless-stopped
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro
 
   traefik:
     image: traefik
+    container_name: traefik
+    ports:
+      - 8080:8080
     command:
-      # - "--logLevel=DEBUG"
-      - "--api.insecure=true"
+      # - --logLevel=DEBUG
+      - --api.insecure=true
       # Enabling docker provider
-      - "--providers.docker=true"
+      - --providers.docker=true
       # Do not expose containers unless explicitly told so
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80"
-      - "8080:8080"
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    restart:
-      always
-
-  weatherbackend:
-    build: ./weatherbackend
-    labels:
-      # Explicitly tell Traefik to expose this container
-      - "traefik.enable=true"
-      # Allow request only from the predefined entry point named "web"
-      - "traefik.http.routers.weatherbackend.entrypoints=web"
-      # The domain the service will respond to
-      - "traefik.http.routers.weatherbackend.rule=Host(`weatherbackend.server.test`)"
-    ports:
-     - "8095"
-    tty:
-      true
-    restart:
-      unless-stopped
-
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
